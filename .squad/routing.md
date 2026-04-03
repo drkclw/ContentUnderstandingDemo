@@ -6,20 +6,23 @@ How to decide who handles what.
 
 | Work Type | Route To | Examples |
 |-----------|----------|----------|
-| {domain 1} | {Name} | {example tasks} |
-| {domain 2} | {Name} | {example tasks} |
-| {domain 3} | {Name} | {example tasks} |
-| Code review | {Name} | Review PRs, check quality, suggest improvements |
-| Testing | {Name} | Write tests, find edge cases, verify fixes |
-| Scope & priorities | {Name} | What to build next, trade-offs, decisions |
+| Architecture & design | Morpheus | System design, API contracts, project structure, tech decisions |
+| Backend API & .NET | Neo | API endpoints, Azure Content Understanding integration, .NET services |
+| Frontend & Vue | Trinity | Vue components, UI layout, frontend API calls, styling |
+| Testing & QA | Oracle | Unit tests, integration tests, edge cases, quality validation |
+| Code review | Morpheus | Review PRs, check quality, approve/reject |
+| Scope & priorities | Morpheus | What to build next, trade-offs, decisions |
 | Session logging | Scribe | Automatic — never needs routing |
 
 ## Issue Routing
 
 | Label | Action | Who |
 |-------|--------|-----|
-| `squad` | Triage: analyze issue, assign `squad:{member}` label | Lead |
-| `squad:{name}` | Pick up issue and complete the work | Named member |
+| `squad` | Triage: analyze issue, assign `squad:{member}` label | Morpheus |
+| `squad:neo` | Backend API work | Neo |
+| `squad:trinity` | Frontend Vue work | Trinity |
+| `squad:oracle` | Testing work | Oracle |
+| `squad:morpheus` | Architecture/review work | Morpheus |
 
 ### How Issue Assignment Works
 
