@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/api/">
+    <Project Path="src/api/ContentUnderstanding.Api/ContentUnderstanding.Api.csproj" />
+    <Project Path="src/api/ContentUnderstanding.Api.Tests/ContentUnderstanding.Api.Tests.csproj" />
+  </Folder>
+</Solution>

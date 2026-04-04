@@ -5,3 +5,24 @@
 .squad/sessions/
 # Squad: SubSquad activation file (local to this machine)
 .squad-workstream
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.vs/
+.dotnet/
+*.DotSettings.user
+
+# Node / Vite
+node_modules/
+dist/
+*.local
+.env
+.env.*
+
+# IDE
+.idea/
+*.swp
+*.swo

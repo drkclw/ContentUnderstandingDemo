@@ -1,0 +1,7 @@
+@ContentUnderstanding.Api_HostAddress = http://localhost:5107
+
+### Health Check
+GET {{ContentUnderstanding.Api_HostAddress}}/api/health
+
+### Get Analysis Result
+GET {{ContentUnderstanding.Api_HostAddress}}/api/analyze/{{resultId}}
