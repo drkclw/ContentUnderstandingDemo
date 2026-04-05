@@ -21,7 +21,6 @@ public class AnalyzeUrlEndpointTests : IClassFixture<ApiFixture>
     public async Task Post_AnalyzeUrl_WithValidUrl_ReturnsOkWithResponse()
     {
         // Arrange
-        // NOTE: compiles once Neo adds TranscriptSegment and Summary/Transcript fields to AnalysisResponse
         var expectedResponse = new AnalysisResponse(
             Id: "url-abc-123",
             Status: "Succeeded",
