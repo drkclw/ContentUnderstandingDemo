@@ -24,11 +24,21 @@ export interface FieldResult {
   type?: FieldType | null;
 }
 
+export interface TranscriptSegment {
+  speaker: string;
+  text: string;
+  startTimeSeconds: number;
+  endTimeSeconds: number;
+}
+
 export interface AnalysisResponse {
   id: string;
   status: string;
   scenario: string | null;
   fileName: string;
   analyzedAt: string;
+  analysisDurationMs: number | null;
   fields: Record<string, FieldResult> | null;
+  summary?: string | null;
+  transcript?: TranscriptSegment[] | null;
 }

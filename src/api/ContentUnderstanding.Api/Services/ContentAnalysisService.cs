@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using Azure;
 using Azure.AI.ContentUnderstanding;
 using Azure.Identity;
@@ -46,12 +47,17 @@ public sealed class ContentAnalysisService : IContentAnalysisService
         await content.CopyToAsync(ms, cancellationToken);
         var binaryData = BinaryData.FromBytes(ms.ToArray());
 
+        var stopwatch = Stopwatch.StartNew();
         var operation = await _client.AnalyzeBinaryAsync(
             WaitUntil.Completed,
             analyzerId,
             binaryData,
             contentType: contentType,
             cancellationToken: cancellationToken);
+        stopwatch.Stop();
+
+        _logger.LogInformation("Azure Content Understanding API call took {DurationMs:F0} ms for {FileName}",
+            stopwatch.Elapsed.TotalMilliseconds, fileName);
 
         var result = operation.Value;
         var fields = ExtractFields(result);
@@ -62,6 +68,7 @@ public sealed class ContentAnalysisService : IContentAnalysisService
             FileName: fileName,
             Scenario: scenario,
             AnalyzedAt: result.CreatedAt ?? DateTimeOffset.UtcNow,
+            AnalysisDurationMs: stopwatch.Elapsed.TotalMilliseconds,
             Fields: fields);
 
         _resultCache[operation.Id] = response;
@@ -72,11 +79,94 @@ public sealed class ContentAnalysisService : IContentAnalysisService
         return response;
     }
 
+    public async Task<AnalysisResponse> AnalyzeUrlAsync(string url, string scenario, CancellationToken cancellationToken = default)
+    {
+        if (!_analyzers.TryGetValue(scenario, out var analyzerId))
+            throw new ArgumentException($"Unknown analysis scenario: '{scenario}'. Available: {string.Join(", ", _analyzers.Keys)}");
+
+        _logger.LogInformation("Analyzing URL {Url} with scenario {Scenario}", url, scenario);
+
+        var stopwatch = Stopwatch.StartNew();
+        var operation = await _client.AnalyzeAsync(
+            WaitUntil.Completed,
+            analyzerId,
+            inputs: new[] { new AnalysisInput { Uri = new Uri(url) } },
+            cancellationToken: cancellationToken);
+        stopwatch.Stop();
+
+        _logger.LogInformation("Azure Content Understanding API call took {DurationMs:F0} ms for URL {Url}",
+            stopwatch.Elapsed.TotalMilliseconds, url);
+
+        var result = operation.Value;
+        var (summary, transcript) = ExtractVideoContent(result);
+
+        var fileName = Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            ? System.IO.Path.GetFileName(uri.LocalPath)
+            : url;
+
+        var response = new AnalysisResponse(
+            Id: operation.Id,
+            Status: "succeeded",
+            FileName: string.IsNullOrEmpty(fileName) ? url : fileName,
+            Scenario: scenario,
+            AnalyzedAt: result.CreatedAt ?? DateTimeOffset.UtcNow,
+            AnalysisDurationMs: stopwatch.Elapsed.TotalMilliseconds,
+            Fields: null,
+            Summary: summary,
+            Transcript: transcript);
+
+        _resultCache[operation.Id] = response;
+
+        _logger.LogInformation("URL analysis completed for {Url}: summary={HasSummary}, transcript={SegmentCount} segments",
+            url, summary is not null, transcript?.Count ?? 0);
+
+        return response;
+    }
+
     public Task<AnalysisResponse?> GetResultAsync(string id, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Retrieving analysis result {Id}", id);
         _resultCache.TryGetValue(id, out var result);
         return Task.FromResult(result);
+    }
+
+    private static (string? summary, IReadOnlyList<TranscriptSegment>? transcript) ExtractVideoContent(AnalysisResult result)
+    {
+        if (result.Contents is null or { Count: 0 })
+            return (null, null);
+
+        // Summary — from first AudioVisualContent item's Fields dictionary (capital S)
+        string? summary = null;
+        if (result.Contents[0] is AudioVisualContent firstAv
+            && firstAv.Fields?.TryGetValue("Summary", out var summaryField) == true
+            && summaryField is ContentStringField summaryStr)
+        {
+            summary = summaryStr.Value;
+        }
+
+        // Transcript — from TranscriptPhrases on each AudioVisualContent segment
+        var segments = new List<TranscriptSegment>();
+        foreach (var content in result.Contents)
+        {
+            if (content is not AudioVisualContent avContent)
+                continue;
+
+            if (avContent.TranscriptPhrases is null)
+                continue;
+
+            foreach (var phrase in avContent.TranscriptPhrases)
+            {
+                if (string.IsNullOrWhiteSpace(phrase.Text))
+                    continue;
+
+                string speaker = phrase.Speaker ?? "Unknown";
+                double startSec = phrase.StartTime.TotalSeconds;
+                double endSec = phrase.EndTime.TotalSeconds;
+                segments.Add(new TranscriptSegment(speaker, phrase.Text, startSec, endSec));
+            }
+        }
+
+        return (summary, segments.Count > 0 ? segments : null);
     }
 
     private static IReadOnlyDictionary<string, FieldResult>? ExtractFields(AnalysisResult result)

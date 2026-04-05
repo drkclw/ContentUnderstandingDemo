@@ -59,7 +59,7 @@ body {
 }
 
 .app {
-  max-width: 960px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 2rem 1rem;
 }

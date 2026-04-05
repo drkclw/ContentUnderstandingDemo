@@ -36,6 +36,7 @@ public class AnalyzeEndpointTests : IClassFixture<ApiFixture>
             FileName: "test.pdf",
             Scenario: "invoice",
             AnalyzedAt: DateTimeOffset.UtcNow,
+            AnalysisDurationMs: null,
             Fields: new Dictionary<string, FieldResult>
             {
                 ["Title"] = new FieldResult("Title", "Sample Document", 0.95f, "string")
@@ -98,6 +99,7 @@ public class AnalyzeEndpointTests : IClassFixture<ApiFixture>
             FileName: "report.docx",
             Scenario: "invoice",
             AnalyzedAt: DateTimeOffset.UtcNow,
+            AnalysisDurationMs: null,
             Fields: null);
 
         _fixture.MockService
@@ -124,6 +126,7 @@ public class AnalyzeEndpointTests : IClassFixture<ApiFixture>
             FileName: "invoice.pdf",
             Scenario: "invoice",
             AnalyzedAt: DateTimeOffset.UtcNow,
+            AnalysisDurationMs: null,
             Fields: new Dictionary<string, FieldResult>
             {
                 ["VendorName"] = new FieldResult("VendorName", "Contoso Ltd", 0.98f, "string"),
@@ -171,6 +174,45 @@ public class AnalyzeEndpointTests : IClassFixture<ApiFixture>
         Assert.Equal("array", result.Fields["LineItems"].Type);
         Assert.Equal("number", result.Fields["InvoiceTotal"].Type);
         Assert.Equal("boolean", result.Fields["IsVerified"].Type);
+    }
+
+    [Theory]
+    [InlineData("utility-bill", "utility-bill-001", "electric-bill.pdf")]
+    [InlineData("receipt", "receipt-001", "grocery-receipt.pdf")]
+    [InlineData("custom", "custom-001", "custom-doc.pdf")]
+    public async Task Post_Analyze_WithScenario_ReturnsOkWithMatchingScenario(string scenario, string expectedId, string fileName)
+    {
+        // Arrange
+        var expectedResponse = new AnalysisResponse(
+            Id: expectedId,
+            Status: "Succeeded",
+            FileName: fileName,
+            Scenario: scenario,
+            AnalyzedAt: DateTimeOffset.UtcNow,
+            AnalysisDurationMs: null,
+            Fields: new Dictionary<string, FieldResult>
+            {
+                ["SampleField"] = new FieldResult("SampleField", "value", 0.90f, "string")
+            });
+
+        _fixture.MockService
+            .AnalyzeAsync(Arg.Any<Stream>(), Arg.Is(fileName), Arg.Any<string>(), Arg.Is(scenario), Arg.Any<CancellationToken>())
+            .Returns(expectedResponse);
+
+        var formContent = CreateFileContent("file content"u8.ToArray(), fileName);
+
+        // Act
+        var response = await _client.PostAsync($"/api/analyze?scenario={scenario}", formContent);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<AnalysisResponse>();
+        Assert.NotNull(result);
+        Assert.Equal(expectedId, result.Id);
+        Assert.Equal("Succeeded", result.Status);
+        Assert.Equal(fileName, result.FileName);
+        Assert.Equal(scenario, result.Scenario);
+        Assert.NotNull(result.Fields);
     }
 
     [Fact]

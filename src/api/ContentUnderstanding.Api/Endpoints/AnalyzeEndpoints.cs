@@ -1,3 +1,4 @@
+using ContentUnderstanding.Api.Models;
 using ContentUnderstanding.Api.Services;
 
 namespace ContentUnderstanding.Api.Endpoints;
@@ -24,6 +25,20 @@ public static class AnalyzeEndpoints
         })
         .WithName("AnalyzeContent")
         .WithDescription("Upload a file for content analysis");
+
+        group.MapPost("/url", async (AnalyzeUrlRequest request, IContentAnalysisService service, CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Url))
+                return Results.BadRequest("URL is required.");
+
+            if (!Uri.TryCreate(request.Url, UriKind.Absolute, out _))
+                return Results.BadRequest("URL is not valid.");
+
+            var result = await service.AnalyzeUrlAsync(request.Url, request.Scenario, ct);
+            return Results.Ok(result);
+        })
+        .WithName("AnalyzeUrl")
+        .WithDescription("Submit a URL (e.g. video) for content analysis");
 
         group.MapGet("/{id}", async (string id, IContentAnalysisService service, CancellationToken ct) =>
         {
