@@ -35,3 +35,25 @@ Test project: `src/api/ContentUnderstanding.Api.Tests/`
 - Updated existing `Post_Analyze_WithValidFile_ReturnsOkWithResponse` test: added `"string"` type to FieldResult constructor
 - Added `Post_Analyze_WithComplexFields_SerializesNestedTypesCorrectly` test: covers object fields (nested dictionary of FieldResult), array fields (list of FieldResult), plus number and boolean value types — verifies correct serialization through the API endpoint
 - 7 tests total, all passing
+
+### 2026-04-04 — Added scenario-specific endpoint tests
+
+Added `Post_Analyze_WithScenario_ReturnsOkWithMatchingScenario` — a parameterized `[Theory]` test covering utility-bill, receipt, and custom scenarios. Uses `[InlineData]` for each scenario with expected ID, file name. Verifies status code, response fields, and scenario matching. 8 tests total now.
+
+### 2026-04-04 — Updated video URL tests for Summary + Transcript fields (Oracle)
+
+Updated `AnalyzeUrlEndpointTests` to cover new `Summary` and `Transcript` fields on `AnalysisResponse` (spec from Morpheus decision inbox). Changes:
+- `Post_AnalyzeUrl_WithValidUrl_ReturnsOkWithResponse` — extended mock with `Summary` + 2-item `Transcript`; added assertions for both
+- `Post_AnalyzeUrl_WithVideoScenario_ReturnsSummaryAndTranscript` — 3-segment transcript, verifies summary text, count, first speaker, non-zero StartTimeSeconds on second segment
+- `Post_AnalyzeUrl_WithNoTranscript_ReturnsNullTranscript` — summary present but Transcript explicitly null; verifies null assertion
+
+Build fails with `CS0246`/`CS1061` for `TranscriptSegment` and `Summary`/`Transcript` on `AnalysisResponse` — expected, awaiting Neo's model extension. Tests are structurally correct and will go green once Neo's PR lands.
+
+### 2026-04-04 — Added video URL endpoint tests (Oracle)
+
+Created `AnalyzeUrlEndpointTests` in a new file for `POST /api/analyze/url`. 4 tests:
+- `Post_AnalyzeUrl_WithValidUrl_ReturnsOkWithResponse` — happy path, valid https URL + "video" scenario, verifies 200 and response fields
+- `Post_AnalyzeUrl_WithEmptyUrl_ReturnsBadRequest` — empty string URL yields 400
+- `Post_AnalyzeUrl_WithMissingUrl_ReturnsBadRequest` — null URL field yields 400
+- `Post_AnalyzeUrl_WithVideoScenario_ReturnsMatchingScenario` — verifies Scenario field in response equals "video"
+By the time tests were written, Neo had already added `AnalyzeUrlAsync` to `IContentAnalysisService` — no TODO needed. Build fails on the production implementation (Azure SDK `ContentUnderstandingClient` doesn't have `AnalyzeUrlAsync` yet) — not a test-code issue. Tests will be green once Neo's implementation lands.

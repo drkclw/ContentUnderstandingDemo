@@ -33,6 +33,19 @@ export async function getResult(id: string): Promise<AnalysisResponse> {
   return response.json();
 }
 
+export async function analyzeUrl(url: string, scenario: string): Promise<AnalysisResponse> {
+  const response = await fetch('/api/analyze/url', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, scenario }),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Request failed: ${response.status}`);
+  }
+  return response.json();
+}
+
 export async function checkHealth(): Promise<boolean> {
   try {
     const response = await fetch(`${BASE_URL}/health`);
