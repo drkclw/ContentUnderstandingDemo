@@ -68,6 +68,8 @@ Frontend starts at `http://localhost:5173` and proxies `/api` requests to the ba
 
 ## Team
 
+Built with [Squad](https://github.com/bradygaster/squad)
+
 | Role | Agent | Owns |
 |------|-------|------|
 | Lead | Morpheus | Architecture, code review, triage |
